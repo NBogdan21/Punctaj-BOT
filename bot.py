@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║         BOT POLITIE - SISTEM PUNCTE SI GRAD                  ║
+║         BOT Sagrada - SISTEM PUNCTE SI GRAD                  ║
 ╚══════════════════════════════════════════════════════════════╝
 Comenzi: /panou  /profil  /clasament  /ajutor
 """
@@ -540,7 +540,7 @@ async def on_ready():
 async def panou(interaction: discord.Interaction):
     date = incarca_date()
     emb = discord.Embed(
-        title="🚔 Panou Administrare — Sistem Puncte Politie",
+        title="🚔 Panou Administrare — Sistem Puncte Sagrada",
         description=(
             f"**Saptamana:** {_get_sapt()}  |  **Membri:** {len(date['membri'])}\n\n"
             f"Foloseste butoanele pentru a gestiona membrii si punctele.\n"
@@ -585,7 +585,7 @@ async def clasament(interaction: discord.Interaction):
 
 @bot.tree.command(name="ajutor", description="Afiseaza ghidul comenzilor")
 async def ajutor(interaction: discord.Interaction):
-    emb = discord.Embed(title="🚔 Ghid Bot Politie", color=discord.Color.blue())
+    emb = discord.Embed(title="🚔 Ghid Bot Sagrada", color=discord.Color.blue())
     emb.add_field(name="📌 Comenzi", value="`/panou` — Panoul cu butoane\n`/profil [@user]` — Profil si puncte\n`/clasament` — Top membri\n`/ajutor` — Acest meniu", inline=False)
     emb.add_field(name="🔒 Din Panou", value=f"➕ Adauga/➖ Sterge/🔄 Reseteaza Puncte\n👤 Profil | ➕ Adauga | 🗑️ Sterge Membru\n🏆 Clasament | 📋 Verificare | 🔁 Resetare Sapt.\n\n*Necesita rol: **{ROL_ADMIN}***", inline=False)
     actv = "\n".join(f"{a['emoji']} {a['nume']}: **+{a['puncte']}** pct" for a in ACTIVITATI.values())
