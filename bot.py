@@ -598,9 +598,14 @@ async def on_err(interaction: discord.Interaction, error):
     if not interaction.response.is_done():
         await interaction.response.send_message(f"❌ Eroare: `{error}`", ephemeral=True)
 
+import os
+
 if __name__ == "__main__":
-    import os
     token = os.getenv("TOKEN")
-        log.error("❌ Completeaza TOKEN-ul in config.json!"); exit(1)
-    log.info("🚔 Pornire Bot Politie...")
+
+    if not token:
+        log.error("❌ TOKEN lipsa din Railway Variables!")
+        exit(1)
+
+    log.info("🚔 Pornire Bot Sagrada...")
     bot.run(token, log_handler=None)
