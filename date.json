@@ -1,0 +1,34 @@
+{
+  "membri": {
+    "1335731782586204220": {
+      "username": "Preotu",
+      "grad": "A1",
+      "puncte_saptamanale": 2,
+      "puncte_totale": 2,
+      "raiduri_cayo": 0,
+      "activitati": {
+        "livrat_200_coca": 1
+      },
+      "avertismente": 0,
+      "inregistrat_la": "2026-04-12T23:08:47.637990",
+      "ultima_activitate": "2026-04-12T23:09:06.536427",
+      "istoric_resetari": []
+    },
+    "1393281638045188296": {
+      "username": "Edi Kok",
+      "grad": "A1",
+      "puncte_saptamanale": 3,
+      "puncte_totale": 3,
+      "raiduri_cayo": 0,
+      "activitati": {
+        "procesat_400_crack": 1
+      },
+      "avertismente": 0,
+      "inregistrat_la": "2026-04-12T23:09:20.954450",
+      "ultima_activitate": "2026-04-12T23:09:39.088400",
+      "istoric_resetari": []
+    }
+  },
+  "ultima_resetare": "2026-04-12T22:53:08.167479",
+  "saptamana_curenta": "2026-W15"
+}
