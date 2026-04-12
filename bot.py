@@ -600,7 +600,7 @@ async def on_err(interaction: discord.Interaction, error):
 
 if __name__ == "__main__":
     token = config.get("token", "")
-    if not token or token == "TOKEN_BOT_AICI":
+    if not token or token = config.get("token", "")
         log.error("❌ Completeaza TOKEN-ul in config.json!"); exit(1)
     log.info("🚔 Pornire Bot Politie...")
     bot.run(token, log_handler=None)
