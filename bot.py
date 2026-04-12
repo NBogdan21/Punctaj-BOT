@@ -602,6 +602,8 @@ import os
 
 if __name__ == "__main__":
     token = os.getenv("TOKEN")
+    print("TOKEN EXISTS:", bool(token))
+    print("TOKEN LEN:", len(token or ""))
 
     if not token:
         log.error("❌ TOKEN lipsa din Railway Variables!")
