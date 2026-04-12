@@ -66,6 +66,7 @@ def incarca_config():
         return json.load(f)
 
 config = incarca_config()
+LOG_CHANNEL_ID = config.get("id_loguri")
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -266,57 +267,110 @@ class ViewSelectPuncte(discord.ui.View):
         opts = []
         for uid, uname in membri[:25]:
             m = date["membri"].get(uid, {})
-            opts.append(discord.SelectOption(label=uname[:100], value=uid,
-                description=f"Grad: {m.get('grad','A1')} | Pct: {m.get('puncte_saptamanale',0)}", emoji="👮"))
+            opts.append(discord.SelectOption(
+                label=uname[:100],
+                value=uid,
+                description=f"Grad: {m.get('grad','A1')} | Pct: {m.get('puncte_saptamanale',0)}",
+                emoji="👮"
+            ))
         if opts:
             s = discord.ui.Select(placeholder="🔍 Selecteaza membrul...", options=opts, custom_id="sm")
-            s.callback = self.on_m; self.add_item(s)
+            s.callback = self.on_m
+            self.add_item(s)
+
         semn = "+" if actiune == "adauga" else "-"
-        oa = [discord.SelectOption(label=a["nume"][:100], value=k,
-            description=f"{semn}{a['puncte']} puncte", emoji=a["emoji"]) for k, a in ACTIVITATI.items()]
+        oa = [
+            discord.SelectOption(
+                label=a["nume"][:100],
+                value=k,
+                description=f"{semn}{a['puncte']} puncte",
+                emoji=a["emoji"]
+            )
+            for k, a in ACTIVITATI.items()
+        ]
         sa = discord.ui.Select(placeholder="🎯 Selecteaza activitatea...", options=oa, custom_id="sa")
-        sa.callback = self.on_a; self.add_item(sa)
+        sa.callback = self.on_a
+        self.add_item(sa)
+
         bc = discord.ui.Button(label="✅ Confirma", style=discord.ButtonStyle.green, custom_id="bc")
-        bc.callback = self.on_c; self.add_item(bc)
+        bc.callback = self.on_c
+        self.add_item(bc)
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.autor_id:
-            await interaction.response.send_message("❌ Doar initiatorul poate folosi acest meniu!", ephemeral=True); return False
+            await interaction.response.send_message("❌ Doar initiatorul poate folosi acest meniu!", ephemeral=True)
+            return False
         return True
 
     async def on_m(self, interaction):
-        self.sel_uid = interaction.data["values"][0]; await interaction.response.defer()
+        self.sel_uid = interaction.data["values"][0]
+        await interaction.response.defer()
 
     async def on_a(self, interaction):
-        self.sel_actv = interaction.data["values"][0]; await interaction.response.defer()
+        self.sel_actv = interaction.data["values"][0]
+        await interaction.response.defer()
 
     async def on_c(self, interaction):
         if not self.sel_uid or not self.sel_actv:
-            await interaction.response.send_message("⚠️ Selecteaza si membrul si activitatea!", ephemeral=True); return
+            await interaction.response.send_message("⚠️ Selecteaza si membrul si activitatea!", ephemeral=True)
+            return
+
         date = incarca_date()
         if self.sel_uid not in date["membri"]:
-            await interaction.response.send_message("❌ Membrul nu exista!", ephemeral=True); return
-        m = date["membri"][self.sel_uid]; actv = ACTIVITATI[self.sel_actv]; pct = actv["puncte"]
+            await interaction.response.send_message("❌ Membrul nu exista!", ephemeral=True)
+            return
+
+        m = date["membri"][self.sel_uid]
+        actv = ACTIVITATI[self.sel_actv]
+        pct = actv["puncte"]
+
         if self.actiune == "adauga":
-            m["puncte_saptamanale"] += pct; m["puncte_totale"] = m.get("puncte_totale", 0) + pct
-            if self.sel_actv == "raid_cayo": m["raiduri_cayo"] = m.get("raiduri_cayo", 0) + 1
-            m.setdefault("activitati", {})[self.sel_actv] = m["activitati"].get(self.sel_actv, 0) + 1
-            txt = f"+{pct}"; culoare = discord.Color.green()
+            m["puncte_saptamanale"] += pct
+            m["puncte_totale"] = m.get("puncte_totale", 0) + pct
+
+            if LOG_CHANNEL_ID:
+                canal = interaction.guild.get_channel(int(LOG_CHANNEL_ID))
+                if canal:
+                    await canal.send(
+                        f"📊 {interaction.user.mention} a adaugat **{pct} puncte** lui **{m['username']}**\n"
+                        f"🎯 Activitate: {actv['nume']}"
+                    )
+
+            if self.sel_actv == "raid_cayo":
+                m["raiduri_cayo"] = m.get("raiduri_cayo", 0) + 1
+
+            m.setdefault("activitati", {})
+            m["activitati"][self.sel_actv] = m["activitati"].get(self.sel_actv, 0) + 1
+
+            txt = f"+{pct}"
+            culoare = discord.Color.green()
         else:
-            sc = min(pct, m["puncte_saptamanale"]); m["puncte_saptamanale"] = max(0, m["puncte_saptamanale"] - pct)
-            txt = f"-{sc}"; culoare = discord.Color.red()
+            sc = min(pct, m["puncte_saptamanale"])
+            m["puncte_saptamanale"] = max(0, m["puncte_saptamanale"] - pct)
+            txt = f"-{sc}"
+            culoare = discord.Color.red()
+
         mg = verifica_avansare(date, self.sel_uid)
-        m["ultima_activitate"] = datetime.utcnow().isoformat(); salveaza_date(date)
-        emb = discord.Embed(title=f"{actv['emoji']} Puncte {'Adaugate' if self.actiune=='adauga' else 'Sterse'}", color=culoare, timestamp=datetime.utcnow())
+        m["ultima_activitate"] = datetime.utcnow().isoformat()
+        salveaza_date(date)
+
+        emb = discord.Embed(
+            title=f"{actv['emoji']} Puncte {'Adaugate' if self.actiune=='adauga' else 'Sterse'}",
+            color=culoare,
+            timestamp=datetime.utcnow()
+        )
         emb.add_field(name="👮 Membru", value=f"**{m['username']}**", inline=True)
         emb.add_field(name="🎯 Activitate", value=actv["nume"], inline=True)
         emb.add_field(name="📊 Modificare", value=f"`{txt}`", inline=True)
         emb.add_field(name="⭐ Total Sapt.", value=f"**{m['puncte_saptamanale']}** pct", inline=True)
         emb.add_field(name="🏅 Grad", value=f"**{m['grad']}**", inline=True)
         emb.add_field(name="🏝️ Raiduri Cayo", value=f"{m.get('raiduri_cayo',0)}/{MINIM_RAIDURI_CAYO}", inline=True)
-        if mg: emb.add_field(name="🎖️ Schimbare Grad", value=mg, inline=False)
+        if mg:
+            emb.add_field(name="🎖️ Schimbare Grad", value=mg, inline=False)
         emb.set_footer(text=f"Actiune de {interaction.user.display_name}")
-        await interaction.response.edit_message(embed=emb, view=None); self.stop()
+
+        await interaction.response.edit_message(embed=emb, view=None)
+        self.stop()
 
 
 class ViewSelectProfil(discord.ui.View):
