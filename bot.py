@@ -445,21 +445,26 @@ class ViewSelectPuncte(discord.ui.View):
             m["puncte_saptamanale"] += pct
             m["puncte_totale"] = m.get("puncte_totale", 0) + pct
 
+            log.info(f"📊 {interaction.user} a adaugat {pct} puncte lui {m['username']} | Activitate: {actv['nume']}")
+
             if LOG_CHANNEL_ID:
-                canal = interaction.guild.get_channel(int(LOG_CHANNEL_ID))
+                canal = bot.get_channel(int(LOG_CHANNEL_ID))
 
                 if not canal:
                     try:
-                        canal = await interaction.guild.fetch_channel(int(LOG_CHANNEL_ID))
-                    except Exception:
-                        log.error(f"❌ Nu gasesc canalul de loguri cu ID {LOG_CHANNEL_ID}")
+                        canal = await bot.fetch_channel(int(LOG_CHANNEL_ID))
+                    except Exception as e:
+                        log.error(f"❌ Nu gasesc canalul de loguri cu ID {LOG_CHANNEL_ID} | {e}")
                         canal = None
 
                 if canal:
-                    await canal.send(
-                        f"📊 {interaction.user.mention} a adaugat **{pct} puncte** lui **{m['username']}**\n"
-                        f"🎯 Activitate: {actv['nume']}"
-                    )
+                    try:
+                        await canal.send(
+                            f"📊 {interaction.user.mention} a adaugat **{pct} puncte** lui **{m['username']}**\n"
+                            f"🎯 Activitate: {actv['nume']}"
+                        )
+                    except Exception as e:
+                        log.error(f"❌ Nu pot trimite mesaj in canalul de loguri {LOG_CHANNEL_ID} | {e}")
 
             if self.sel_actv == "raid_cayo":
                 m["raiduri_cayo"] = m.get("raiduri_cayo", 0) + 1
@@ -789,6 +794,14 @@ async def task_alerta():
 @bot.event
 async def on_ready():
     log.info(f"✅ Bot conectat ca {bot.user} (ID: {bot.user.id})")
+
+    if LOG_CHANNEL_ID:
+        try:
+            ch = await bot.fetch_channel(int(LOG_CHANNEL_ID))
+            log.info(f"✅ Canal log gasit la pornire: {ch} | id={LOG_CHANNEL_ID}")
+        except Exception as e:
+            log.error(f"❌ Canal log invalid la pornire: {LOG_CHANNEL_ID} | {e}")
+
     bot.add_view(PanouPrincipal())
     try:
         synced = await bot.tree.sync()
