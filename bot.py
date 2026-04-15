@@ -29,15 +29,68 @@ MINIM_SAPTAMANAL = 20
 MINIM_RAIDURI_CAYO = 3
 
 ACTIVITATI = {
-    "raid_cayo":            {"nume": "Raid Cayo",                  "puncte": 2, "emoji": "🏝️"},
-    "actiune_oras":         {"nume": "Prezenta Actiune Oras",      "puncte": 3, "emoji": "🏙️"},
-    "actiune_cayo":         {"nume": "Prezenta Actiune Cayo",      "puncte": 3, "emoji": "⚓"},
-    "capturat_hot":         {"nume": "Capturat Hot (bodycam)",     "puncte": 1, "emoji": "🚔"},
-    "livrat_200_coca":      {"nume": "Livrat 200 Coca",            "puncte": 2, "emoji": "📦"},
-    "livrat_400_crack":     {"nume": "Livrat 400 Crack",           "puncte": 3, "emoji": "📦"},
-    "procesat_200_coca":    {"nume": "Procesat 200 Coca",          "puncte": 2, "emoji": "⚗️"},
-    "procesat_400_crack":   {"nume": "Procesat 400 Crack",         "puncte": 3, "emoji": "⚗️"},
-    "recoltat_1000_frunze": {"nume": "Recoltat 1000 Frunze Coca",  "puncte": 2, "emoji": "🌿"},
+    "raid_cayo": {
+        "nume": "Razie Cayo",
+        "puncte": 2,
+        "emoji": "🏝️"
+    },
+    "actiune_oras": {
+        "nume": "Prezenta Actiune Oras",
+        "puncte": 3,
+        "emoji": "🏙️"
+    },
+    "actiune_cayo": {
+        "nume": "Prezenta Actiune Cayo",
+        "puncte": 3,
+        "emoji": "⚓"
+    },
+    "prindere_jefuitor": {
+        "nume": "Prindere Jefuitor (bodycam)",
+        "puncte": 1,
+        "emoji": "🚔"
+    },
+    "livrat_coca": {
+        "nume": "Livrat Coca",
+        "puncte": 2,
+        "emoji": "📦",
+        "cantitate_baza": 200
+    },
+    "livrat_crack": {
+        "nume": "Livrat Crack",
+        "puncte": 3,
+        "emoji": "📦",
+        "cantitate_baza": 400
+    },
+    "procesat_coca": {
+        "nume": "Procesat Coca",
+        "puncte": 2,
+        "emoji": "⚗️",
+        "cantitate_baza": 200
+    },
+    "procesat_crack": {
+        "nume": "Procesat Crack",
+        "puncte": 3,
+        "emoji": "⚗️",
+        "cantitate_baza": 400
+    },
+    "cules_frunze_coca": {
+        "nume": "Cules Frunze Coca",
+        "puncte": 2,
+        "emoji": "🌿",
+        "cantitate_baza": 1000
+    },
+    "set_oxy": {
+        "nume": "Set Oxy",
+        "puncte": 2,
+        "emoji": "💊",
+        "cantitate_baza": 1
+    },
+    "mentiune_personalizata": {
+        "nume": "Mentiune Personalizata",
+        "puncte": 0,
+        "emoji": "📝",
+        "custom": True
+    }
 }
 
 # ── BAZA DE DATE ──────────────────────────────────────────────
@@ -134,18 +187,27 @@ def verifica_avansare(date, uid):
 def bara(p, mx, l=10):
     if mx == 0:
         return "█" * l
-    u = min(int(p / mx * l), l)
+    u = min(int((p / mx) * l), l)
     return "█" * u + "░" * (l - u)
+
+def fmt_puncte(x):
+    try:
+        x = float(x)
+    except Exception:
+        return str(x)
+    if x.is_integer():
+        return str(int(x))
+    return f"{x:.2f}".rstrip("0").rstrip(".")
 
 def make_embed_profil(uid, m):
     g = m["grad"]
-    p = m["puncte_saptamanale"]
+    p = float(m["puncte_saptamanale"])
     r = m.get("raiduri_cayo", 0)
 
     if g in PRAGURI_AVANSARE:
         pr = PRAGURI_AVANSARE[g]
         ng = GRADE[GRADE.index(g) + 1]
-        prog = f"`{bara(p, pr)}` {p}/{pr} → **{ng}**"
+        prog = f"`{bara(p, pr)}` {fmt_puncte(p)}/{fmt_puncte(pr)} → **{ng}**"
     else:
         prog = "✅ Grad maxim!"
 
@@ -155,21 +217,47 @@ def make_embed_profil(uid, m):
         timestamp=datetime.utcnow()
     )
     emb.add_field(name="🏅 Grad", value=f"**{g}**", inline=True)
-    emb.add_field(name="⭐ Puncte Sapt.", value=f"**{p}**", inline=True)
-    emb.add_field(name="📈 Total", value=f"**{m.get('puncte_totale', 0)}**", inline=True)
+    emb.add_field(name="⭐ Puncte Sapt.", value=f"**{fmt_puncte(p)}**", inline=True)
+    emb.add_field(name="📈 Total", value=f"**{fmt_puncte(m.get('puncte_totale', 0))}**", inline=True)
     emb.add_field(name="🏝️ Raiduri Cayo", value=f"{'✅' if r >= MINIM_RAIDURI_CAYO else '❌'} {r}/{MINIM_RAIDURI_CAYO}", inline=True)
-    emb.add_field(name="📊 Status", value="✅ In regula" if p >= MINIM_SAPTAMANAL else f"⚠️ Lipsesc {MINIM_SAPTAMANAL-p} pct", inline=True)
+    emb.add_field(name="📊 Status", value="✅ In regula" if p >= MINIM_SAPTAMANAL else f"⚠️ Lipsesc {fmt_puncte(MINIM_SAPTAMANAL-p)} pct", inline=True)
     emb.add_field(name="⚠️ Avertismente", value=str(m.get("avertismente", 0)), inline=True)
     emb.add_field(name="📉 Progres", value=prog, inline=False)
 
     actv = m.get("activitati", {})
     if actv:
-        lst = "\n".join(
-            f"{ACTIVITATI[k]['emoji']} {ACTIVITATI[k]['nume']}: **{v}x**"
-            for k, v in actv.items() if k in ACTIVITATI
-        )
+        lst = []
+        for k, v in actv.items():
+            if k not in ACTIVITATI:
+                continue
+
+            a = ACTIVITATI[k]
+
+            if isinstance(v, int):
+                lst.append(f"{a['emoji']} {a['nume']}: **{v}x**")
+            elif isinstance(v, dict):
+                cnt = v.get("count", 0)
+                cant = v.get("cantitate", 0)
+                pct = v.get("puncte", 0)
+                ment = v.get("ultima_mentiune")
+
+                text = f"{a['emoji']} {a['nume']}: **{cnt}x** | **{fmt_puncte(pct)}p**"
+                if cant:
+                    text += f" | Cant: **{fmt_puncte(cant)}**"
+                if ment:
+                    text += f"\n└ {ment}"
+                lst.append(text)
+
         if lst:
-            emb.add_field(name="📋 Activitati", value=lst[:1024], inline=False)
+            emb.add_field(name="📋 Activitati", value="\n".join(lst)[:1024], inline=False)
+
+    mentiuni = m.get("mentiuni_personalizate", [])
+    if mentiuni:
+        lst = "\n".join(
+            f"📝 {x.get('mentiune', '-')[:70]} — **{fmt_puncte(x.get('puncte', 0))}p**"
+            for x in mentiuni[-5:]
+        )
+        emb.add_field(name="🗒️ Ultimele Mentiuni", value=lst[:1024], inline=False)
 
     emb.set_footer(text=f"Inregistrat la {m.get('inregistrat_la', '')[:10]}")
     return emb
@@ -182,7 +270,7 @@ async def executa_resetare():
     retro, av_pct, av_raid = [], [], []
 
     for uid, m in date["membri"].items():
-        p = m["puncte_saptamanale"]
+        p = float(m["puncte_saptamanale"])
         r = m.get("raiduri_cayo", 0)
         g = m["grad"]
 
@@ -317,6 +405,190 @@ class ModalCautaMembru(discord.ui.Modal, title="Cauta Membru"):
                 ephemeral=True
             )
 
+# ── MODAL DETALII PUNCTAJ ─────────────────────────────────────
+
+class ModalDetaliiPunctaj(discord.ui.Modal, title="Detalii Punctaj"):
+    cantitate = discord.ui.TextInput(
+        label="Cantitate (optional)",
+        placeholder="ex: 200 / 400 / 1000 / 1250",
+        required=False,
+        max_length=20
+    )
+    puncte_manuale = discord.ui.TextInput(
+        label="Puncte manuale (optional)",
+        placeholder="ex: 2.5",
+        required=False,
+        max_length=10
+    )
+    mentiune = discord.ui.TextInput(
+        label="Mentiune / ce a facut (optional)",
+        placeholder="ex: a ajutat, a escortat, a facut extra etc.",
+        required=False,
+        style=discord.TextStyle.paragraph,
+        max_length=300
+    )
+
+    def __init__(self, uid, act_key, autor_id):
+        super().__init__()
+        self.uid = uid
+        self.act_key = act_key
+        self.autor_id = autor_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if interaction.user.id != self.autor_id:
+            await interaction.response.send_message("❌ Doar initiatorul poate folosi acest formular!", ephemeral=True)
+            return
+
+        date = incarca_date()
+        if self.uid not in date["membri"]:
+            await interaction.response.send_message("❌ Membrul nu exista!", ephemeral=True)
+            return
+
+        m = date["membri"][self.uid]
+        actv = ACTIVITATI[self.act_key]
+
+        qty_raw = self.cantitate.value.strip().replace(",", ".")
+        manual_raw = self.puncte_manuale.value.strip().replace(",", ".")
+        ment = self.mentiune.value.strip()
+
+        qty = 0.0
+        pct = 0.0
+
+        if actv.get("custom"):
+            if not ment:
+                await interaction.response.send_message("❌ La mentiune personalizata trebuie sa scrii ce a facut.", ephemeral=True)
+                return
+            if not manual_raw:
+                await interaction.response.send_message("❌ La mentiune personalizata trebuie sa introduci punctele manuale.", ephemeral=True)
+                return
+            try:
+                pct = float(manual_raw)
+            except ValueError:
+                await interaction.response.send_message("❌ Punctele manuale trebuie sa fie numar valid.", ephemeral=True)
+                return
+            if pct <= 0:
+                await interaction.response.send_message("❌ Punctele manuale trebuie sa fie mai mari ca 0.", ephemeral=True)
+                return
+        else:
+            if qty_raw:
+                try:
+                    qty = float(qty_raw)
+                except ValueError:
+                    await interaction.response.send_message("❌ Cantitatea trebuie sa fie numar valid.", ephemeral=True)
+                    return
+                if qty <= 0:
+                    await interaction.response.send_message("❌ Cantitatea trebuie sa fie mai mare ca 0.", ephemeral=True)
+                    return
+
+            if manual_raw:
+                try:
+                    pct = float(manual_raw)
+                except ValueError:
+                    await interaction.response.send_message("❌ Punctele manuale trebuie sa fie numar valid.", ephemeral=True)
+                    return
+                if pct <= 0:
+                    await interaction.response.send_message("❌ Punctele manuale trebuie sa fie mai mari ca 0.", ephemeral=True)
+                    return
+            else:
+                baza_pct = float(actv["puncte"])
+                baza_cant = actv.get("cantitate_baza")
+
+                if baza_cant:
+                    if not qty:
+                        qty = float(baza_cant)
+                    pct = round((qty / float(baza_cant)) * baza_pct, 2)
+                else:
+                    pct = baza_pct
+
+        m["puncte_saptamanale"] = float(m.get("puncte_saptamanale", 0)) + pct
+        m["puncte_totale"] = float(m.get("puncte_totale", 0)) + pct
+
+        if self.act_key == "raid_cayo":
+            m["raiduri_cayo"] = m.get("raiduri_cayo", 0) + 1
+
+        m.setdefault("activitati", {})
+        vechi = m["activitati"].get(self.act_key, {"count": 0, "cantitate": 0, "puncte": 0, "ultima_mentiune": None})
+
+        if isinstance(vechi, int):
+            vechi = {
+                "count": vechi,
+                "cantitate": 0,
+                "puncte": vechi * float(actv.get("puncte", 0)),
+                "ultima_mentiune": None
+            }
+
+        vechi["count"] = vechi.get("count", 0) + 1
+        vechi["puncte"] = float(vechi.get("puncte", 0)) + pct
+        if qty > 0:
+            vechi["cantitate"] = float(vechi.get("cantitate", 0)) + qty
+        if ment:
+            vechi["ultima_mentiune"] = ment[:150]
+
+        m["activitati"][self.act_key] = vechi
+        m["ultima_activitate"] = datetime.utcnow().isoformat()
+
+        if actv.get("custom"):
+            m.setdefault("mentiuni_personalizate", [])
+            m["mentiuni_personalizate"].append({
+                "data": datetime.utcnow().isoformat(),
+                "mentiune": ment,
+                "puncte": pct
+            })
+
+        mg = verifica_avansare(date, self.uid)
+        salveaza_date(date)
+
+        log.info(
+            f"📊 {interaction.user} a adaugat {fmt_puncte(pct)} puncte lui {m['username']} | "
+            f"Activitate: {actv['nume']} | Cantitate: {fmt_puncte(qty) if qty else '-'} | Mentiune: {ment or '-'}"
+        )
+
+        if LOG_CHANNEL_ID:
+            canal = bot.get_channel(int(LOG_CHANNEL_ID))
+
+            if not canal:
+                try:
+                    canal = await bot.fetch_channel(int(LOG_CHANNEL_ID))
+                except Exception as e:
+                    log.error(f"❌ Nu gasesc canalul de loguri cu ID {LOG_CHANNEL_ID} | {e}")
+                    canal = None
+
+            if canal:
+                try:
+                    msg = (
+                        f"📊 {interaction.user.mention} a adaugat **{fmt_puncte(pct)} puncte** lui **{m['username']}**\n"
+                        f"🎯 Activitate: {actv['nume']}"
+                    )
+                    if qty:
+                        msg += f"\n📦 Cantitate: **{fmt_puncte(qty)}**"
+                    if ment:
+                        msg += f"\n📝 Mentiune: {ment}"
+                    await canal.send(msg)
+                except Exception as e:
+                    log.error(f"❌ Nu pot trimite mesaj in canalul de loguri {LOG_CHANNEL_ID} | {e}")
+
+        emb = discord.Embed(
+            title=f"{actv['emoji']} Puncte Adaugate",
+            color=discord.Color.green(),
+            timestamp=datetime.utcnow()
+        )
+        emb.add_field(name="👮 Membru", value=f"**{m['username']}**", inline=True)
+        emb.add_field(name="🎯 Activitate", value=actv["nume"], inline=True)
+        emb.add_field(name="📊 Modificare", value=f"`+{fmt_puncte(pct)}`", inline=True)
+        emb.add_field(name="⭐ Total Sapt.", value=f"**{fmt_puncte(m['puncte_saptamanale'])}** pct", inline=True)
+        emb.add_field(name="🏅 Grad", value=f"**{m['grad']}**", inline=True)
+        emb.add_field(name="🏝️ Raiduri Cayo", value=f"{m.get('raiduri_cayo',0)}/{MINIM_RAIDURI_CAYO}", inline=True)
+
+        if qty:
+            emb.add_field(name="📦 Cantitate", value=f"**{fmt_puncte(qty)}**", inline=True)
+        if ment:
+            emb.add_field(name="📝 Mentiune", value=ment[:1024], inline=False)
+        if mg:
+            emb.add_field(name="🎖️ Schimbare Grad", value=mg, inline=False)
+
+        emb.set_footer(text=f"Actiune de {interaction.user.display_name}")
+        await interaction.response.send_message(embed=emb, ephemeral=True)
+
 # ── VIEWS ─────────────────────────────────────────────────────
 
 class PanouPrincipal(discord.ui.View):
@@ -324,7 +596,13 @@ class PanouPrincipal(discord.ui.View):
         super().__init__(timeout=None)
 
     async def check_admin(self, interaction):
-        return True
+        if are_rol_admin(interaction.user):
+            return True
+        await interaction.response.send_message(
+            f"❌ Ai nevoie de rolul **{ROL_ADMIN}** sau permisiuni de administrator!",
+            ephemeral=True
+        )
+        return False
 
     @discord.ui.button(label="➕ Adauga Puncte", style=discord.ButtonStyle.green, custom_id="p_adauga", row=0)
     async def btn_adauga(self, interaction, button):
@@ -386,16 +664,16 @@ class PanouPrincipal(discord.ui.View):
         if not date["membri"]:
             await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
             return
-        sortati = sorted(date["membri"].items(), key=lambda x: x[1]["puncte_saptamanale"], reverse=True)
+        sortati = sorted(date["membri"].items(), key=lambda x: float(x[1]["puncte_saptamanale"]), reverse=True)
         medalii = ["🥇", "🥈", "🥉"]
         linii = []
         for i, (uid, m) in enumerate(sortati[:20]):
             e = medalii[i] if i < 3 else f"`{i+1:2d}.`"
-            s = "✅" if m["puncte_saptamanale"] >= MINIM_SAPTAMANAL else "⚠️"
+            s = "✅" if float(m["puncte_saptamanale"]) >= MINIM_SAPTAMANAL else "⚠️"
             rd = "✅" if m.get("raiduri_cayo", 0) >= MINIM_RAIDURI_CAYO else f"🏝️{m.get('raiduri_cayo',0)}"
-            linii.append(f"{e} **{m['username']}** — `{m['grad']}` | **{m['puncte_saptamanale']}** pct {s} {rd}")
+            linii.append(f"{e} **{m['username']}** — `{m['grad']}` | **{fmt_puncte(m['puncte_saptamanale'])}** pct {s} {rd}")
         total = len(date["membri"])
-        sub = sum(1 for m in date["membri"].values() if m["puncte_saptamanale"] < MINIM_SAPTAMANAL)
+        sub = sum(1 for m in date["membri"].values() if float(m["puncte_saptamanale"]) < MINIM_SAPTAMANAL)
         emb = discord.Embed(title="🏆 Clasament Saptamanal", description=f"Saptamana **{_get_sapt()}**", color=discord.Color.gold(), timestamp=datetime.utcnow())
         emb.add_field(name=f"Top {min(len(sortati),20)}", value="\n".join(linii) or "—", inline=False)
         emb.add_field(name="👥 Total", value=str(total), inline=True)
@@ -408,13 +686,13 @@ class PanouPrincipal(discord.ui.View):
         if not await self.check_admin(interaction):
             return
         date = incarca_date()
-        sub_p = [m for m in date["membri"].values() if m["puncte_saptamanale"] < MINIM_SAPTAMANAL]
+        sub_p = [m for m in date["membri"].values() if float(m["puncte_saptamanale"]) < MINIM_SAPTAMANAL]
         sub_r = [m for m in date["membri"].values() if m.get("raiduri_cayo", 0) < MINIM_RAIDURI_CAYO]
         emb = discord.Embed(title="📋 Raport Verificare", color=discord.Color.orange(), timestamp=datetime.utcnow())
         emb.add_field(
             name=f"⚠️ Sub Minim Puncte ({len(sub_p)})",
             value="\n".join(
-                f"• **{m['username']}** ({m['grad']}) — {m['puncte_saptamanale']}/{MINIM_SAPTAMANAL}"
+                f"• **{m['username']}** ({m['grad']}) — {fmt_puncte(m['puncte_saptamanale'])}/{MINIM_SAPTAMANAL}"
                 for m in sub_p
             )[:1024] or "✅ Toti sunt ok!",
             inline=False
@@ -457,7 +735,7 @@ class ViewSelectPuncte(discord.ui.View):
             opts.append(discord.SelectOption(
                 label=uname[:100],
                 value=uid,
-                description=f"Grad: {m.get('grad','A1')} | Pct: {m.get('puncte_saptamanale',0)}",
+                description=f"Grad: {m.get('grad','A1')} | Pct: {fmt_puncte(m.get('puncte_saptamanale',0))}",
                 emoji="👮"
             ))
         if opts:
@@ -466,15 +744,23 @@ class ViewSelectPuncte(discord.ui.View):
             self.add_item(s)
 
         semn = "+" if actiune == "adauga" else "-"
-        oa = [
-            discord.SelectOption(
+
+        oa = []
+        for k, a in ACTIVITATI.items():
+            if a.get("custom"):
+                desc = "Mentiune libera + puncte manuale"
+            elif a.get("cantitate_baza"):
+                desc = f"{semn}{fmt_puncte(a['puncte'])} pct / {fmt_puncte(a['cantitate_baza'])}"
+            else:
+                desc = f"{semn}{fmt_puncte(a['puncte'])} puncte"
+
+            oa.append(discord.SelectOption(
                 label=a["nume"][:100],
                 value=k,
-                description=f"{semn}{a['puncte']} puncte",
+                description=desc[:100],
                 emoji=a["emoji"]
-            )
-            for k, a in ACTIVITATI.items()
-        ]
+            ))
+
         sa = discord.ui.Select(placeholder="🎯 Selecteaza activitatea...", options=oa, custom_id="sa")
         sa.callback = self.on_a
         self.add_item(sa)
@@ -509,64 +795,31 @@ class ViewSelectPuncte(discord.ui.View):
 
         m = date["membri"][self.sel_uid]
         actv = ACTIVITATI[self.sel_actv]
-        pct = actv["puncte"]
+        pct = float(actv["puncte"])
 
         if self.actiune == "adauga":
-            m["puncte_saptamanale"] += pct
-            m["puncte_totale"] = m.get("puncte_totale", 0) + pct
+            await interaction.response.send_modal(
+                ModalDetaliiPunctaj(self.sel_uid, self.sel_actv, self.autor_id)
+            )
+            self.stop()
+            return
 
-            log.info(f"📊 {interaction.user} a adaugat {pct} puncte lui {m['username']} | Activitate: {actv['nume']}")
-
-            if LOG_CHANNEL_ID:
-                canal = bot.get_channel(int(LOG_CHANNEL_ID))
-
-                if not canal:
-                    try:
-                        canal = await bot.fetch_channel(int(LOG_CHANNEL_ID))
-                    except Exception as e:
-                        log.error(f"❌ Nu gasesc canalul de loguri cu ID {LOG_CHANNEL_ID} | {e}")
-                        canal = None
-
-                if canal:
-                    try:
-                        await canal.send(
-                            f"📊 {interaction.user.mention} a adaugat **{pct} puncte** lui **{m['username']}**\n"
-                            f"🎯 Activitate: {actv['nume']}"
-                        )
-                    except Exception as e:
-                        log.error(f"❌ Nu pot trimite mesaj in canalul de loguri {LOG_CHANNEL_ID} | {e}")
-
-            if self.sel_actv == "raid_cayo":
-                m["raiduri_cayo"] = m.get("raiduri_cayo", 0) + 1
-
-            m.setdefault("activitati", {})
-            m["activitati"][self.sel_actv] = m["activitati"].get(self.sel_actv, 0) + 1
-
-            txt = f"+{pct}"
-            culoare = discord.Color.green()
-        else:
-            sc = min(pct, m["puncte_saptamanale"])
-            m["puncte_saptamanale"] = max(0, m["puncte_saptamanale"] - pct)
-            txt = f"-{sc}"
-            culoare = discord.Color.red()
-
-        mg = verifica_avansare(date, self.sel_uid)
+        sc = min(pct, float(m["puncte_saptamanale"]))
+        m["puncte_saptamanale"] = max(0, float(m["puncte_saptamanale"]) - pct)
         m["ultima_activitate"] = datetime.utcnow().isoformat()
         salveaza_date(date)
 
         emb = discord.Embed(
-            title=f"{actv['emoji']} Puncte {'Adaugate' if self.actiune=='adauga' else 'Sterse'}",
-            color=culoare,
+            title=f"{actv['emoji']} Puncte Sterse",
+            color=discord.Color.red(),
             timestamp=datetime.utcnow()
         )
         emb.add_field(name="👮 Membru", value=f"**{m['username']}**", inline=True)
         emb.add_field(name="🎯 Activitate", value=actv["nume"], inline=True)
-        emb.add_field(name="📊 Modificare", value=f"`{txt}`", inline=True)
-        emb.add_field(name="⭐ Total Sapt.", value=f"**{m['puncte_saptamanale']}** pct", inline=True)
+        emb.add_field(name="📊 Modificare", value=f"`-{fmt_puncte(sc)}`", inline=True)
+        emb.add_field(name="⭐ Total Sapt.", value=f"**{fmt_puncte(m['puncte_saptamanale'])}** pct", inline=True)
         emb.add_field(name="🏅 Grad", value=f"**{m['grad']}**", inline=True)
         emb.add_field(name="🏝️ Raiduri Cayo", value=f"{m.get('raiduri_cayo',0)}/{MINIM_RAIDURI_CAYO}", inline=True)
-        if mg:
-            emb.add_field(name="🎖️ Schimbare Grad", value=mg, inline=False)
         emb.set_footer(text=f"Actiune de {interaction.user.display_name}")
 
         await interaction.response.edit_message(embed=emb, view=None)
@@ -582,7 +835,7 @@ class ViewSelectProfil(discord.ui.View):
             discord.SelectOption(
                 label=un[:100],
                 value=uid,
-                description=f"Grad: {date['membri'].get(uid,{}).get('grad','A1')} | Pct: {date['membri'].get(uid,{}).get('puncte_saptamanale',0)}",
+                description=f"Grad: {date['membri'].get(uid,{}).get('grad','A1')} | Pct: {fmt_puncte(date['membri'].get(uid,{}).get('puncte_saptamanale',0))}",
                 emoji="👮"
             )
             for uid, un in membri[:25]
@@ -617,7 +870,7 @@ class ViewSelectResetare(discord.ui.View):
             discord.SelectOption(
                 label=un[:100],
                 value=uid,
-                description=f"Grad: {date['membri'].get(uid,{}).get('grad','A1')} | Pct: {date['membri'].get(uid,{}).get('puncte_saptamanale',0)}",
+                description=f"Grad: {date['membri'].get(uid,{}).get('grad','A1')} | Pct: {fmt_puncte(date['membri'].get(uid,{}).get('puncte_saptamanale',0))}",
                 emoji="👮"
             )
             for uid, un in membri[:25]
@@ -642,7 +895,7 @@ class ViewSelectResetare(discord.ui.View):
         m = date["membri"][uid]
         emb = discord.Embed(
             title="⚠️ Confirmare Resetare",
-            description=f"Resetezi punctele lui **{m['username']}**?\nAre **{m['puncte_saptamanale']}** puncte acum.",
+            description=f"Resetezi punctele lui **{m['username']}**?\nAre **{fmt_puncte(m['puncte_saptamanale'])}** puncte acum.",
             color=discord.Color.orange()
         )
         await interaction.response.edit_message(embed=emb, view=ViewConfirmResetMembru(uid, m["username"], self.autor_id))
@@ -673,7 +926,7 @@ class ViewConfirmResetMembru(discord.ui.View):
             m["activitati"] = {}
             salveaza_date(date)
             emb = discord.Embed(title="🔄 Puncte Resetate", color=discord.Color.orange())
-            emb.add_field(name="Puncte Sterse", value=str(v), inline=True)
+            emb.add_field(name="Puncte Sterse", value=fmt_puncte(v), inline=True)
             emb.add_field(name="Puncte Acum", value="0", inline=True)
             await interaction.response.edit_message(embed=emb, view=None)
         self.stop()
@@ -810,7 +1063,8 @@ class ModalAdaugaMembru(discord.ui.Modal, title="Adauga Membru Nou"):
             "avertismente": 0,
             "inregistrat_la": datetime.utcnow().isoformat(),
             "ultima_activitate": None,
-            "istoric_resetari": []
+            "istoric_resetari": [],
+            "mentiuni_personalizate": []
         }
         salveaza_date(date)
 
@@ -845,7 +1099,7 @@ async def task_alerta():
     acum = datetime.now(tz)
     if acum.weekday() == 6 and acum.hour == 18:
         date = incarca_date()
-        sub = [m for m in date["membri"].values() if m["puncte_saptamanale"] < MINIM_SAPTAMANAL]
+        sub = [m for m in date["membri"].values() if float(m["puncte_saptamanale"]) < MINIM_SAPTAMANAL]
         cid = config.get("canal_rapoarte")
         if cid and sub:
             c = bot.get_channel(int(cid))
@@ -859,7 +1113,7 @@ async def task_alerta():
                 emb.add_field(
                     name="Membri in Risc",
                     value="\n".join(
-                        f"• **{m['username']}** ({m['grad']}) — {m['puncte_saptamanale']}/{MINIM_SAPTAMANAL} pct"
+                        f"• **{m['username']}** ({m['grad']}) — {fmt_puncte(m['puncte_saptamanale'])}/{MINIM_SAPTAMANAL} pct"
                         for m in sub[:20]
                     )[:1024],
                     inline=False
@@ -937,18 +1191,18 @@ async def clasament(interaction: discord.Interaction):
         await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
         return
 
-    sortati = sorted(date["membri"].items(), key=lambda x: x[1]["puncte_saptamanale"], reverse=True)
+    sortati = sorted(date["membri"].items(), key=lambda x: float(x[1]["puncte_saptamanale"]), reverse=True)
     medalii = ["🥇", "🥈", "🥉"]
     linii = []
 
     for i, (uid, m) in enumerate(sortati[:20]):
         e = medalii[i] if i < 3 else f"`{i+1:2d}.`"
-        s = "✅" if m["puncte_saptamanale"] >= MINIM_SAPTAMANAL else "⚠️"
+        s = "✅" if float(m["puncte_saptamanale"]) >= MINIM_SAPTAMANAL else "⚠️"
         rd = "✅" if m.get("raiduri_cayo", 0) >= MINIM_RAIDURI_CAYO else f"🏝️{m.get('raiduri_cayo',0)}"
-        linii.append(f"{e} **{m['username']}** — `{m['grad']}` | **{m['puncte_saptamanale']}** pct {s} {rd}")
+        linii.append(f"{e} **{m['username']}** — `{m['grad']}` | **{fmt_puncte(m['puncte_saptamanale'])}** pct {s} {rd}")
 
     total = len(date["membri"])
-    sub = sum(1 for m in date["membri"].values() if m["puncte_saptamanale"] < MINIM_SAPTAMANAL)
+    sub = sum(1 for m in date["membri"].values() if float(m["puncte_saptamanale"]) < MINIM_SAPTAMANAL)
 
     emb = discord.Embed(
         title="🏆 Clasament Saptamanal",
@@ -981,7 +1235,11 @@ async def ajutor(interaction: discord.Interaction):
         ),
         inline=False
     )
-    actv = "\n".join(f"{a['emoji']} {a['nume']}: **+{a['puncte']}** pct" for a in ACTIVITATI.values())
+    actv = "\n".join(
+        f"{a['emoji']} {a['nume']}: **+{fmt_puncte(a['puncte'])}** pct"
+        + (f" / {fmt_puncte(a['cantitate_baza'])}" if a.get("cantitate_baza") else "")
+        for a in ACTIVITATI.values()
+    )
     emb.add_field(name="🎯 Activitati & Puncte", value=actv, inline=False)
     await interaction.response.send_message(embed=emb)
 
