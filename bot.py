@@ -106,6 +106,16 @@ def are_rol_admin(member):
         return True
     return any(r.name == ROL_ADMIN for r in member.roles)
 
+def filtreaza_membri(date, query=""):
+    """Returneaza lista de (uid, username) filtrata dupa query, max 25."""
+    query = query.strip().lower()
+    membri = [
+        (uid, m["username"])
+        for uid, m in date["membri"].items()
+        if not query or query in m["username"].lower()
+    ]
+    return membri[:25]
+
 def verifica_avansare(date, uid):
     if uid not in date["membri"]:
         return None
@@ -222,6 +232,91 @@ async def executa_resetare():
 
     return emb
 
+# ── MODAL CAUTARE MEMBRU ──────────────────────────────────────
+
+class ModalCautaMembru(discord.ui.Modal, title="Cauta Membru"):
+    cautare = discord.ui.TextInput(
+        label="Nume (sau lasa gol pentru toti)",
+        placeholder="ex: Ion",
+        required=False,
+        max_length=50
+    )
+
+    def __init__(self, actiune, autor_id):
+        super().__init__()
+        self.actiune = actiune  # "adauga", "sterge", "profil", "reset_m", "del_m"
+        self.autor_id = autor_id
+
+    async def on_submit(self, interaction):
+        date = incarca_date()
+        membri = filtreaza_membri(date, self.cautare.value)
+
+        if not membri:
+            await interaction.response.send_message(
+                f"❌ Niciun membru gasit pentru **'{self.cautare.value}'**!",
+                ephemeral=True
+            )
+            return
+
+        nr = len(membri)
+        hint = f"**{nr}** membri gasiti. Selecteaza mai jos."
+
+        if self.actiune == "adauga":
+            emb = discord.Embed(
+                title="➕ Adauga Puncte",
+                description=hint,
+                color=discord.Color.green()
+            )
+            await interaction.response.send_message(
+                embed=emb,
+                view=ViewSelectPuncte(membri, "adauga", self.autor_id),
+                ephemeral=True
+            )
+        elif self.actiune == "sterge":
+            emb = discord.Embed(
+                title="➖ Sterge Puncte",
+                description=hint,
+                color=discord.Color.red()
+            )
+            await interaction.response.send_message(
+                embed=emb,
+                view=ViewSelectPuncte(membri, "sterge", self.autor_id),
+                ephemeral=True
+            )
+        elif self.actiune == "profil":
+            emb = discord.Embed(
+                title="👤 Profil Membru",
+                description=hint,
+                color=discord.Color.blurple()
+            )
+            await interaction.response.send_message(
+                embed=emb,
+                view=ViewSelectProfil(membri, self.autor_id),
+                ephemeral=True
+            )
+        elif self.actiune == "reset_m":
+            emb = discord.Embed(
+                title="🔄 Resetare Puncte Membru",
+                description=hint,
+                color=discord.Color.orange()
+            )
+            await interaction.response.send_message(
+                embed=emb,
+                view=ViewSelectResetare(membri, self.autor_id),
+                ephemeral=True
+            )
+        elif self.actiune == "del_m":
+            emb = discord.Embed(
+                title="🗑️ Sterge Membru",
+                description=hint,
+                color=discord.Color.red()
+            )
+            await interaction.response.send_message(
+                embed=emb,
+                view=ViewSelectSterge(membri, self.autor_id),
+                ephemeral=True
+            )
+
 # ── VIEWS ─────────────────────────────────────────────────────
 
 class PanouPrincipal(discord.ui.View):
@@ -239,17 +334,7 @@ class PanouPrincipal(discord.ui.View):
         if not date["membri"]:
             await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
             return
-        membri = [(uid, m["username"]) for uid, m in date["membri"].items()]
-        emb = discord.Embed(
-            title="➕ Adauga Puncte",
-            description="Selecteaza membrul si activitatea, apoi apasa **Confirma**.",
-            color=discord.Color.green()
-        )
-        await interaction.response.send_message(
-            embed=emb,
-            view=ViewSelectPuncte(membri, "adauga", interaction.user.id),
-            ephemeral=True
-        )
+        await interaction.response.send_modal(ModalCautaMembru("adauga", interaction.user.id))
 
     @discord.ui.button(label="➖ Sterge Puncte", style=discord.ButtonStyle.red, custom_id="p_sterge", row=0)
     async def btn_sterge(self, interaction, button):
@@ -259,17 +344,7 @@ class PanouPrincipal(discord.ui.View):
         if not date["membri"]:
             await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
             return
-        membri = [(uid, m["username"]) for uid, m in date["membri"].items()]
-        emb = discord.Embed(
-            title="➖ Sterge Puncte",
-            description="Selecteaza membrul si activitatea, apoi apasa **Confirma**.",
-            color=discord.Color.red()
-        )
-        await interaction.response.send_message(
-            embed=emb,
-            view=ViewSelectPuncte(membri, "sterge", interaction.user.id),
-            ephemeral=True
-        )
+        await interaction.response.send_modal(ModalCautaMembru("sterge", interaction.user.id))
 
     @discord.ui.button(label="🔄 Resetare Puncte", style=discord.ButtonStyle.grey, custom_id="p_reset_m", row=0)
     async def btn_reset_pct(self, interaction, button):
@@ -279,9 +354,7 @@ class PanouPrincipal(discord.ui.View):
         if not date["membri"]:
             await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
             return
-        membri = [(uid, m["username"]) for uid, m in date["membri"].items()]
-        emb = discord.Embed(title="🔄 Resetare Puncte Membru", description="Selecteaza membrul.", color=discord.Color.orange())
-        await interaction.response.send_message(embed=emb, view=ViewSelectResetare(membri, interaction.user.id), ephemeral=True)
+        await interaction.response.send_modal(ModalCautaMembru("reset_m", interaction.user.id))
 
     @discord.ui.button(label="👤 Profil Membru", style=discord.ButtonStyle.blurple, custom_id="p_profil", row=1)
     async def btn_profil(self, interaction, button):
@@ -289,9 +362,7 @@ class PanouPrincipal(discord.ui.View):
         if not date["membri"]:
             await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
             return
-        membri = [(uid, m["username"]) for uid, m in date["membri"].items()]
-        emb = discord.Embed(title="👤 Profil Membru", description="Selecteaza membrul.", color=discord.Color.blurple())
-        await interaction.response.send_message(embed=emb, view=ViewSelectProfil(membri, interaction.user.id), ephemeral=True)
+        await interaction.response.send_modal(ModalCautaMembru("profil", interaction.user.id))
 
     @discord.ui.button(label="➕ Adauga Membru", style=discord.ButtonStyle.green, custom_id="p_add_m", row=1)
     async def btn_add_m(self, interaction, button):
@@ -307,9 +378,7 @@ class PanouPrincipal(discord.ui.View):
         if not date["membri"]:
             await interaction.response.send_message("❌ Nu exista membri!", ephemeral=True)
             return
-        membri = [(uid, m["username"]) for uid, m in date["membri"].items()]
-        emb = discord.Embed(title="🗑️ Sterge Membru", description="Selecteaza membrul.", color=discord.Color.red())
-        await interaction.response.send_message(embed=emb, view=ViewSelectSterge(membri, interaction.user.id), ephemeral=True)
+        await interaction.response.send_modal(ModalCautaMembru("del_m", interaction.user.id))
 
     @discord.ui.button(label="🏆 Clasament", style=discord.ButtonStyle.blurple, custom_id="p_cls", row=2)
     async def btn_cls(self, interaction, button):
@@ -371,6 +440,7 @@ class PanouPrincipal(discord.ui.View):
             color=discord.Color.red()
         )
         await interaction.response.send_message(embed=emb, view=ViewConfirmResetSapt(interaction.user.id), ephemeral=True)
+
 
 class ViewSelectPuncte(discord.ui.View):
     def __init__(self, membri, actiune, autor_id):
@@ -502,6 +572,7 @@ class ViewSelectPuncte(discord.ui.View):
         await interaction.response.edit_message(embed=emb, view=None)
         self.stop()
 
+
 class ViewSelectProfil(discord.ui.View):
     def __init__(self, membri, autor_id):
         super().__init__(timeout=60)
@@ -535,6 +606,7 @@ class ViewSelectProfil(discord.ui.View):
             return
         await interaction.response.edit_message(embed=make_embed_profil(uid, date["membri"][uid]), view=None)
         self.stop()
+
 
 class ViewSelectResetare(discord.ui.View):
     def __init__(self, membri, autor_id):
@@ -576,6 +648,7 @@ class ViewSelectResetare(discord.ui.View):
         await interaction.response.edit_message(embed=emb, view=ViewConfirmResetMembru(uid, m["username"], self.autor_id))
         self.stop()
 
+
 class ViewConfirmResetMembru(discord.ui.View):
     def __init__(self, uid, username, autor_id):
         super().__init__(timeout=30)
@@ -609,6 +682,7 @@ class ViewConfirmResetMembru(discord.ui.View):
     async def nu(self, interaction, button):
         await interaction.response.edit_message(content="❌ Anulat.", embed=None, view=None)
         self.stop()
+
 
 class ViewSelectSterge(discord.ui.View):
     def __init__(self, membri, autor_id):
@@ -650,6 +724,7 @@ class ViewSelectSterge(discord.ui.View):
         await interaction.response.edit_message(embed=emb, view=ViewConfirmSterge(uid, username, self.autor_id))
         self.stop()
 
+
 class ViewConfirmSterge(discord.ui.View):
     def __init__(self, uid, username, autor_id):
         super().__init__(timeout=30)
@@ -678,6 +753,7 @@ class ViewConfirmSterge(discord.ui.View):
         await interaction.response.edit_message(content="❌ Anulat.", embed=None, view=None)
         self.stop()
 
+
 class ViewConfirmResetSapt(discord.ui.View):
     def __init__(self, autor_id):
         super().__init__(timeout=30)
@@ -700,6 +776,7 @@ class ViewConfirmResetSapt(discord.ui.View):
     async def nu(self, interaction, button):
         await interaction.response.edit_message(content="❌ Anulat.", embed=None, view=None)
         self.stop()
+
 
 class ModalAdaugaMembru(discord.ui.Modal, title="Adauga Membru Nou"):
     username = discord.ui.TextInput(label="Nume Discord", placeholder="ex: IonPopescu", max_length=100)
@@ -895,7 +972,13 @@ async def ajutor(interaction: discord.Interaction):
     )
     emb.add_field(
         name="🔒 Din Panou",
-        value=f"➕ Adauga/➖ Sterge/🔄 Reseteaza Puncte\n👤 Profil | ➕ Adauga | 🗑️ Sterge Membru\n🏆 Clasament | 📋 Verificare | 🔁 Resetare Sapt.\n\n*Necesita rol: **{ROL_ADMIN}***",
+        value=(
+            f"➕ Adauga/➖ Sterge/🔄 Reseteaza Puncte\n"
+            f"👤 Profil | ➕ Adauga | 🗑️ Sterge Membru\n"
+            f"🏆 Clasament | 📋 Verificare | 🔁 Resetare Sapt.\n\n"
+            f"*Cautarea membrilor: scrie numele (sau lasa gol pentru toti)*\n"
+            f"*Necesita rol: **{ROL_ADMIN}***"
+        ),
         inline=False
     )
     actv = "\n".join(f"{a['emoji']} {a['nume']}: **+{a['puncte']}** pct" for a in ACTIVITATI.values())
